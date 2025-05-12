@@ -35,6 +35,9 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
       .attr('viewBox', [0, 0, width, height])
       .attr('style', 'max-width: 100%; height: auto;');
 
+    // Create a group for zoom transformation
+    const g = svg.append("g");
+
     // Get graph data in the required format
     const hierarchyData = d3.hierarchy(data);
     const links = hierarchyData.links();
@@ -67,24 +70,19 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
       .force('collision', d3.forceCollide().radius(30));
 
     // Create links
-    const link = svg.append('g')
+    const link = g.append('g')
       .selectAll('line')
       .data(links)
       .join('line')
       .attr('class', 'link');
 
     // Create node groups
-    const node = svg.append('g')
+    const node = g.append('g')
       .selectAll('g')
       .data(nodes)
       .join('g')
       .attr('class', 'tool-node')
-      .style('opacity', (d: any) => matchesSearch(d) ? 1 : 0.2)
-      .on('click', (event, d: any) => {
-        if (d.data.url) {
-          window.open(d.data.url, '_blank');
-        }
-      });
+      .style('opacity', (d: any) => matchesSearch(d) ? 1 : 0.2);
 
     // Add circles to nodes
     node.append('circle')
@@ -109,6 +107,16 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
         if (d.data.type) tooltip += `\nType: ${d.data.type}`;
         return tooltip;
       });
+
+    // Add click handler - moved out of node creation for better event isolation
+    node.on('click', (event, d: any) => {
+      // Stop propagation to prevent zoom interference
+      event.stopPropagation();
+      
+      if (d.data.url) {
+        window.open(d.data.url, '_blank');
+      }
+    });
 
     // Update positions on each tick
     simulation.on('tick', () => {
@@ -140,14 +148,22 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
 
     node.call(drag as any);
 
-    // Zoom functionality
+    // Improved zoom functionality with limits
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 5])
+      .scaleExtent([0.5, 3]) // Limit zoom range - prevents excessive zooming out
       .on('zoom', (event) => {
-        svg.selectAll('g').attr('transform', event.transform.toString());
+        g.attr('transform', event.transform.toString());
       });
 
-    svg.call(zoom as any);
+    // Initialize zoom behavior with a gentle transition 
+    svg.call(zoom as any)
+      .call(zoom.transform as any, d3.zoomIdentity.translate(width / 6, height / 6).scale(0.8))
+      // Add double-click behavior to reset zoom
+      .on("dblclick.zoom", (event) => {
+        svg.transition()
+          .duration(750)
+          .call(zoom.transform as any, d3.zoomIdentity.translate(width / 6, height / 6).scale(0.8));
+      });
 
     // Handle window resize
     const handleResize = () => {
