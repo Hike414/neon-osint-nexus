@@ -82,13 +82,8 @@
   }
 }
 
-.tool-node {
+.node {
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tool-node:hover {
-  transform: scale(1.05);
 }
 
 .link {

@@ -74,18 +74,20 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('class', 'link');
+      .attr('class', 'link')
+      .attr('stroke', 'rgba(255, 255, 255, 0.2)')
+      .attr('stroke-opacity', 0.6);
 
-    // Create node groups with improved interaction
+    // Create node groups with simplified styling
     const node = g.append('g')
       .selectAll('g')
       .data(nodes)
       .join('g')
-      .attr('class', 'tool-node')
+      .attr('class', 'node')
       .style('cursor', (d: any) => d.data.url ? 'pointer' : 'default')
       .style('opacity', (d: any) => matchesSearch(d) ? 1 : 0.2);
 
-    // Add circles to nodes with larger hit area for better selection
+    // Add circles to nodes with simple styling
     node.append('circle')
       .attr('r', (d: any) => d.children ? 8 : 5)
       .attr('fill', (d: any) => getNodeColor(d))
@@ -99,13 +101,13 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
       .attr('y', 3)
       .attr('font-size', '10px')
       .attr('fill', 'white')
-      .style('pointer-events', 'none'); // Prevent text from intercepting clicks
+      .style('pointer-events', 'none');
 
     // Add invisible larger circle for better click targeting
     node.append('circle')
       .attr('r', 15)
       .attr('fill', 'transparent')
-      .style('pointer-events', 'all'); // This circle captures all clicks
+      .style('pointer-events', 'all');
 
     // Add title for tooltip
     node.append('title')
@@ -124,15 +126,6 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
       if (d.data.url) {
         window.open(d.data.url, '_blank');
       }
-      
-      // Visual feedback when clicking a node
-      d3.select(event.currentTarget).select('circle:first-of-type')
-        .transition()
-        .duration(200)
-        .attr('r', (d: any) => (d.children ? 10 : 7))
-        .transition()
-        .duration(200)
-        .attr('r', (d: any) => (d.children ? 8 : 5));
     });
 
     // Update positions on each tick
