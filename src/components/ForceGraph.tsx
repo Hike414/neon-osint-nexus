@@ -76,15 +76,16 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
       .join('line')
       .attr('class', 'link');
 
-    // Create node groups
+    // Create node groups with improved interaction
     const node = g.append('g')
       .selectAll('g')
       .data(nodes)
       .join('g')
       .attr('class', 'tool-node')
+      .style('cursor', (d: any) => d.data.url ? 'pointer' : 'default')
       .style('opacity', (d: any) => matchesSearch(d) ? 1 : 0.2);
 
-    // Add circles to nodes
+    // Add circles to nodes with larger hit area for better selection
     node.append('circle')
       .attr('r', (d: any) => d.children ? 8 : 5)
       .attr('fill', (d: any) => getNodeColor(d))
@@ -97,7 +98,14 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
       .attr('x', 10)
       .attr('y', 3)
       .attr('font-size', '10px')
-      .attr('fill', 'white');
+      .attr('fill', 'white')
+      .style('pointer-events', 'none'); // Prevent text from intercepting clicks
+
+    // Add invisible larger circle for better click targeting
+    node.append('circle')
+      .attr('r', 15)
+      .attr('fill', 'transparent')
+      .style('pointer-events', 'all'); // This circle captures all clicks
 
     // Add title for tooltip
     node.append('title')
@@ -108,7 +116,7 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
         return tooltip;
       });
 
-    // Add click handler - moved out of node creation for better event isolation
+    // Add click handler with event propagation stopped
     node.on('click', (event, d: any) => {
       // Stop propagation to prevent zoom interference
       event.stopPropagation();
@@ -116,6 +124,15 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
       if (d.data.url) {
         window.open(d.data.url, '_blank');
       }
+      
+      // Visual feedback when clicking a node
+      d3.select(event.currentTarget).select('circle:first-of-type')
+        .transition()
+        .duration(200)
+        .attr('r', (d: any) => (d.children ? 10 : 7))
+        .transition()
+        .duration(200)
+        .attr('r', (d: any) => (d.children ? 8 : 5));
     });
 
     // Update positions on each tick
@@ -148,18 +165,18 @@ const ForceGraph = ({ data, searchTerm }: ForceGraphProps) => {
 
     node.call(drag as any);
 
-    // Improved zoom functionality with limits
+    // Improved zoom functionality with better limits and controls
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 3]) // Limit zoom range - prevents excessive zooming out
+      .scaleExtent([0.5, 3]) // Limit zoom range
       .on('zoom', (event) => {
         g.attr('transform', event.transform.toString());
       });
 
-    // Initialize zoom behavior with a gentle transition 
+    // Initialize zoom behavior with a gentle transition and disable zooming on drag
     svg.call(zoom as any)
       .call(zoom.transform as any, d3.zoomIdentity.translate(width / 6, height / 6).scale(0.8))
       // Add double-click behavior to reset zoom
-      .on("dblclick.zoom", (event) => {
+      .on("dblclick.zoom", () => {
         svg.transition()
           .duration(750)
           .call(zoom.transform as any, d3.zoomIdentity.translate(width / 6, height / 6).scale(0.8));
